@@ -2,3 +2,4 @@
 matching/US_UT01.csv
 matching/test*
 collection/__pycache__/
+.DS_Store

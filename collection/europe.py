@@ -72,18 +72,19 @@ def get_enf_data(recursed=False):
     #         return get_enf_data(True)
     #     return None
 
-pqwriter = pq.ParquetWriter(FILE_PATH, pa.schema([
-    ("frequency", pa.float64()),
-    ("time", pa.string()),
-    ("phase", pa.float64()),
-    ("d", pa.float64()),
-    ("id", pa.int64())
-]))
 
 def append_to_parquet(data):
     df = pd.DataFrame(data, index=[data["id"]])
     df.reset_index(drop=True, inplace=True)
+    pqwriter = pq.ParquetWriter(FILE_PATH, pa.schema([
+        ("frequency", pa.float64()),
+        ("time", pa.string()),
+        ("phase", pa.float64()),
+        ("d", pa.float64()),
+        ("id", pa.int64())
+    ]))
     pqwriter.write_table(pa.Table.from_pandas(df))
+    pqwriter.close()
 
 def create_parquet():
     seed = get_enf_data()
