@@ -8,17 +8,20 @@ import xml.etree.ElementTree as ET
 import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
+from get_data_name import get_enf_data_file_name
 from uas import getUA
+import datetime
+import time
 
-FILE_PATH = "collection/enf_data.parquet"
 last_id = None
 def get_id():
     global last_id
     try:
         if last_id is None:
             # read parquet file and get the last id
-            table = pq.read_table(FILE_PATH)
-            last_id = table["id"].to_pandas().iloc[-1]
+            table = pq.read_metadata(get_enf_data_file_name())
+            num_rows = table.num_rows
+            last_id = num_rows
     except:
         last_id = 0
     last_id += 1
@@ -30,6 +33,7 @@ def get_c():
     return round((random.random() * 100000)) * 31
 
 def get_enf_data(recursed=False):
+    # Placeholder data to test if rate limited
     # return {
     #     "frequency": 50.0,
     #     "time": "2024-08-12 18:05:20",
@@ -51,21 +55,24 @@ def get_enf_data(recursed=False):
     }
     response = requests.get(url, headers=headers)
     data = response.text
+
     try:
         xml = ET.fromstring(data)
         freq = xml.find("f2").text
         time = xml.find("z").text
         phase = xml.find("p").text
         d = xml.find("d").text # I don't know what d is, but it's there so it's (probably) important
+
         data = {
             "frequency": float(freq),
             "time": time.strip(),
             "phase": float(phase),
             "d": float(d),
-            "id": get_id()
         }
+
         return data
     except:
+        # Typically happens because we've been rate limited... I don't know how to handle this
         print("Error parsing XML")
         print(data)
         if not recursed:
@@ -73,16 +80,24 @@ def get_enf_data(recursed=False):
         return None
 
 
+last_name = get_enf_data_file_name()
 def append_to_parquet(data):
-    print("appending" + str(data))
-    df = pd.DataFrame(data, index=[data["id"]])
-    # df.reset_index(drop=True, inplace=True)
-    pqwriter = pq.ParquetWriter(FILE_PATH, pa.schema([
+    global last_name
+    if last_name != get_enf_data_file_name():
+        print("New month, creating new parquet file")
+        while not create_parquet():
+            print("Failed to create parquet file")
+        last_name = get_enf_data_file_name()
+
+    id = get_id()
+    # print("appending " + str(data) + " with id " + str(id))
+    df = pd.DataFrame(data, index=[id])
+
+    pqwriter = pq.ParquetWriter(get_enf_data_file_name(), pa.schema([
         ("frequency", pa.float64()),
         ("time", pa.string()),
         ("phase", pa.float64()),
         ("d", pa.float64()),
-        ("id", pa.int64()),
         ("__index_level_0__", pa.int64())
     ]))
     pqwriter.write_table(pa.Table.from_pandas(df))
@@ -90,37 +105,36 @@ def append_to_parquet(data):
 
 def create_parquet():
     seed = get_enf_data()
-    # table = pa.Table.from_schema(pa.schema([
-    #     ("frequency", pa.float64()),
-    #     ("time", pa.string()),
-    #     ("phase", pa.float64()),
-    #     ("d", pa.float64()),
-    #     ("id", pa.int64())
-    # ]))
     if seed is None:
         print("Failed to get seed data")
-        return
+        return False
+
+    # I don't like this, but I think it's the only way? I'm not sure.
     table = pa.Table.from_pydict({
         "frequency": [seed["frequency"]],
         "time": [seed["time"]],
         "phase": [seed["phase"]],
         "d": [seed["d"]],
-        "id": [seed["id"]],
         "__index_level_0__": [0]
     })
-    pq.write_table(table, FILE_PATH)
+
+    pq.write_table(table, get_enf_data_file_name())
+
+    print("Created parquet file " + get_enf_data_file_name())
+    return True
 
 def main():
     create_parquet()
     while True:
         data = get_enf_data()
         if data is None:
-            print("Failed to get data")
+            print("Failed to get data at " + str(datetime.datetime.now()))
             continue
         append_to_parquet(data)
+        time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
 
 def print_parquet():
-    print(pq.read_metadata(FILE_PATH))
+    print(pq.read_metadata(get_enf_data_file_name()))
 
 
 if __name__ == "__main__":
