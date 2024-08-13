@@ -30,58 +30,60 @@ def get_c():
     return round((random.random() * 100000)) * 31
 
 def get_enf_data(recursed=False):
-    return {
-        "frequency": 50.0,
-        "time": "2024-08-12 18:05:20",
-        "phase": 276.4,
-        "d": 7.0,
-        "id": get_id()
-    }
-    # url = "https://netzfrequenzmessung.de:9081/frequenz02c.xml?c=-31"
-    # headers = {
-    #     "Accept": "*/*",
-    #     "Accept-Language": "en-US,en;q=0.5",
-    #     "Connection": "keep-alive",
-    #     "Host": "www.mainsfrequency.com",
-    #     "Referer": "https://www.mainsfrequency.com/", # trust me bro
-    #     "Sec-Fetch-Dest": "empty",
-    #     "Sec-Fetch-Mode": "cors",
-    #     "Sec-Fetch-Site": "same-origin",
-    #     "User-Agent": getUA()
+    # return {
+    #     "frequency": 50.0,
+    #     "time": "2024-08-12 18:05:20",
+    #     "phase": 276.4,
+    #     "d": 7.0,
+    #     "id": get_id()
     # }
-    # response = requests.get(url, headers=headers)
-    # data = response.text
-    # try:
-    #     xml = ET.fromstring(data)
-    #     freq = xml.find("f2").text
-    #     time = xml.find("z").text
-    #     phase = xml.find("p").text
-    #     d = xml.find("d").text # I don't know what d is, but it's there so it's (probably) important
-    #     data = {
-    #         "frequency": float(freq),
-    #         "time": time.strip(),
-    #         "phase": float(phase),
-    #         "d": float(d),
-    #         "id": get_id()
-    #     }
-    #     return data
-    # except:
-    #     print("Error parsing XML")
-    #     print(data)
-    #     if not recursed:
-    #         return get_enf_data(True)
-    #     return None
+    url = "https://netzfrequenzmessung.de:9081/frequenz02c.xml?c=-31"
+    headers = {
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Connection": "keep-alive",
+        "Host": "www.mainsfrequency.com",
+        "Referer": "https://www.mainsfrequency.com/", # trust me bro
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "User-Agent": getUA()
+    }
+    response = requests.get(url, headers=headers)
+    data = response.text
+    try:
+        xml = ET.fromstring(data)
+        freq = xml.find("f2").text
+        time = xml.find("z").text
+        phase = xml.find("p").text
+        d = xml.find("d").text # I don't know what d is, but it's there so it's (probably) important
+        data = {
+            "frequency": float(freq),
+            "time": time.strip(),
+            "phase": float(phase),
+            "d": float(d),
+            "id": get_id()
+        }
+        return data
+    except:
+        print("Error parsing XML")
+        print(data)
+        if not recursed:
+            return get_enf_data(True)
+        return None
 
 
 def append_to_parquet(data):
+    print("appending" + str(data))
     df = pd.DataFrame(data, index=[data["id"]])
-    df.reset_index(drop=True, inplace=True)
+    # df.reset_index(drop=True, inplace=True)
     pqwriter = pq.ParquetWriter(FILE_PATH, pa.schema([
         ("frequency", pa.float64()),
         ("time", pa.string()),
         ("phase", pa.float64()),
         ("d", pa.float64()),
-        ("id", pa.int64())
+        ("id", pa.int64()),
+        ("__index_level_0__", pa.int64())
     ]))
     pqwriter.write_table(pa.Table.from_pandas(df))
     pqwriter.close()
@@ -103,7 +105,8 @@ def create_parquet():
         "time": [seed["time"]],
         "phase": [seed["phase"]],
         "d": [seed["d"]],
-        "id": [seed["id"]]
+        "id": [seed["id"]],
+        "__index_level_0__": [0]
     })
     pq.write_table(table, FILE_PATH)
 
@@ -121,5 +124,5 @@ def print_parquet():
 
 
 if __name__ == "__main__":
-    # main()
-    print_parquet()
+    main()
+    # print_parquet()
