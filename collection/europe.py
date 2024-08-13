@@ -8,10 +8,11 @@ import xml.etree.ElementTree as ET
 import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
-from get_data_name import get_enf_data_file_name
+from get_data_name import get_enf_data_file_name, get_current_data_dir
 from uas import getUA
 import datetime
 import time
+import os
 
 last_id = None
 def get_id():
@@ -27,10 +28,11 @@ def get_id():
     last_id += 1
     return last_id
 
-# python equivalent of "Math.round(Math.random() * 100000) * 31, true)"
-# for whatever reason, c=-31 *always* works, so... sure lol
+# the numbers 310_000 and -31 always work, but if you send too many requests, they will tell you so...
+# so this function gives a random one of the two
 def get_c():
-    return round((random.random() * 100000)) * 31
+    opts = [-31, 310_000]
+    return str(random.choice(opts))
 
 def get_enf_data(recursed=False):
     # Placeholder data to test if rate limited
@@ -41,7 +43,7 @@ def get_enf_data(recursed=False):
     #     "d": 7.0,
     #     "id": get_id()
     # }
-    url = "https://netzfrequenzmessung.de:9081/frequenz02c.xml?c=-31"
+    url = "https://netzfrequenzmessung.de:9081/frequenz02c.xml?c=" + get_c()
     headers = {
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.5",
@@ -86,41 +88,38 @@ def append_to_parquet(data):
     if last_name != get_enf_data_file_name():
         print("New month, creating new parquet file")
         while not create_parquet():
-            print("Failed to create parquet file")
+            print("Failed to create parquet file, trying again")
         last_name = get_enf_data_file_name()
 
     id = get_id()
     # print("appending " + str(data) + " with id " + str(id))
-    df = pd.DataFrame(data, index=[id])
+    df = pd.DataFrame([data])
+    table = pa.Table.from_pandas(df)
 
-    pqwriter = pq.ParquetWriter(get_enf_data_file_name(), pa.schema([
-        ("frequency", pa.float64()),
-        ("time", pa.string()),
-        ("phase", pa.float64()),
-        ("d", pa.float64()),
-        ("__index_level_0__", pa.int64())
-    ]))
-    pqwriter.write_table(pa.Table.from_pandas(df))
-    pqwriter.close()
+    if os.path.exists(last_name):
+        # Append
+        existing_table = pq.read_table(last_name)
+        combined_table = pa.concat_tables([existing_table, table])
+        pq.write_table(combined_table, last_name)
+    else:
+        pq.write_table(table, last_name)
 
 def create_parquet():
+    if os.path.exists(get_enf_data_file_name()):
+        print("File at " + get_enf_data_file_name() + " already exists, not overwriting")
+        return True
+
     seed = get_enf_data()
     if seed is None:
         print("Failed to get seed data")
         return False
 
-    # I don't like this, but I think it's the only way? I'm not sure.
-    table = pa.Table.from_pydict({
-        "frequency": [seed["frequency"]],
-        "time": [seed["time"]],
-        "phase": [seed["phase"]],
-        "d": [seed["d"]],
-        "__index_level_0__": [0]
-    })
+    table = pa.Table.from_pandas(pd.DataFrame([seed]))
 
-    pq.write_table(table, get_enf_data_file_name())
-
-    print("Created parquet file " + get_enf_data_file_name())
+    if not os.path.exists(get_current_data_dir()):
+        os.makedirs(get_current_data_dir())
+        pq.write_table(table, get_enf_data_file_name())
+        print("Created parquet file " + get_enf_data_file_name())
     return True
 
 def main():
@@ -129,6 +128,9 @@ def main():
         data = get_enf_data()
         if data is None:
             print("Failed to get data at " + str(datetime.datetime.now()))
+
+            # If we get "too many requests", we can just wait a bit and it tends to start working.
+            time.sleep(0.25)
             continue
         append_to_parquet(data)
         time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
@@ -138,5 +140,5 @@ def print_parquet():
 
 
 if __name__ == "__main__":
-    main()
-    # print_parquet()
+    # main()
+    print_parquet()
