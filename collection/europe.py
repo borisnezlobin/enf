@@ -130,7 +130,7 @@ def main():
             print("Failed to get data at " + str(datetime.datetime.now()))
 
             # If we get "too many requests", we can just wait a bit and it tends to start working.
-            time.sleep(0.25)
+            time.sleep(1)
             continue
         append_to_parquet(data)
         time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
@@ -140,5 +140,5 @@ def print_parquet():
 
 
 if __name__ == "__main__":
-    # main()
-    print_parquet()
+    main()
+    # print_parquet()

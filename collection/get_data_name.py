@@ -5,4 +5,4 @@ def get_enf_data_file_name():
 
 def get_current_data_dir():
     now = datetime.datetime.now()
-    return "collection/enf_data/" + str(now.year) + "/" + str(now.month) + "/"
+    return "enf_data/" + str(now.year) + "/" + str(now.month) + "/"
