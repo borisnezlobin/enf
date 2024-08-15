@@ -34,7 +34,10 @@ def get_c():
     opts = [-31, 310_000]
     return str(random.choice(opts))
 
-def get_enf_data(recursed=False):
+def get_ip():
+    return ".".join(str(random.randint(0, 255)) for _ in range(4))
+
+def get_enf_data():
     # Placeholder data to test if rate limited
     # return {
     #     "frequency": 50.0,
@@ -44,6 +47,7 @@ def get_enf_data(recursed=False):
     #     "id": get_id()
     # }
     url = "https://netzfrequenzmessung.de:9081/frequenz02c.xml?c=" + get_c()
+    ip = get_ip()
     headers = {
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.5",
@@ -53,7 +57,9 @@ def get_enf_data(recursed=False):
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
-        "User-Agent": getUA()
+        "User-Agent": getUA(),
+        "Forwarded": "for=" + ip,
+        "X-Forwarded-For": ip,
     }
     response = requests.get(url, headers=headers)
     data = response.text
@@ -75,10 +81,8 @@ def get_enf_data(recursed=False):
         return data
     except:
         # Typically happens because we've been rate limited... I don't know how to handle this
-        print("Error parsing XML")
+        print()
         print(data)
-        if not recursed:
-            return get_enf_data(True)
         return None
 
 
