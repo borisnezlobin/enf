@@ -144,5 +144,5 @@ def print_parquet():
 
 
 if __name__ == "__main__":
-    main()
-    # print_parquet()
+    # main()
+    print_parquet()
