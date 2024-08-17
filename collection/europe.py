@@ -8,11 +8,13 @@ import xml.etree.ElementTree as ET
 import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
-from get_data_name import get_enf_data_file_name
+from get_data_name import get_enf_data_file_name, get_error_file_name
 from uas import getUA
 import datetime
 import time
 import os
+
+last_succesful_write = datetime.datetime.now()
 
 # the numbers 310_000 and -31 always work, but if you send too many requests, they will tell you so...
 # so this function gives a random one of the two
@@ -77,6 +79,26 @@ def append_to_csv(data):
     else:
         print("File doesn't exist, writing data and header")
         df.to_csv(last_name, index=False, header=True, mode='a')
+
+    global last_succesful_write
+    now = int(time.time() * 1000 + 500)
+    if now - last_succesful_write > 2500:
+        write_error(last_succesful_write, now - last_succesful_write)
+    last_succesful_write = now
+
+def write_error(start, duration):
+    path = get_error_file_name()
+    header = False
+    if not os.path.exists(path):
+        header = True
+    
+    with open(path, 'a') as error:
+        if header:
+            error.write("day,start,duration\n")
+
+        error.write(
+            str(datetime.datetime.now().day) + "," + str(start) + "," + str(duration) + "\n"
+        )
 
 def main():
     print("Starting collection...")
