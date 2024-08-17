@@ -1,4 +1,5 @@
 import pyarrow.parquet as pq
+import pyarrow.csv as pv
 import pyarrow as pa
 import pandas as pd
 import os
@@ -13,7 +14,7 @@ def write_parquet_to_csv(parquet, out, include_header=True):
         file.close()
 
 def csv_to_table(csv):
-    table = pa.csv.read_csv(csv)
+    table = pv.read_csv(csv)
     return table
 
 def write_csv_to_parquet(csv, writer):
@@ -22,20 +23,27 @@ def write_csv_to_parquet(csv, writer):
 
 def write_month_to_parquet(out, year, month):
     pq_writer = pq.ParquetWriter(out, pa.schema([
-        ("frequency", pa.float()),
+        ("frequency", pa.float64()),
         ("time", pa.string()),
-        ("phase", pa.float()),
-        ("d", pa.float())
+        ("phase", pa.float64()),
+        ("d", pa.float64())
     ]))
     # no month has more than 31 (and I made it 33 just to be safe) days right...
     for i in range(33):
         path = os.path.join("enf_data", str(year), str(month), str(i) + ".csv")
         # todo (have class)
         if os.path.exists(path):
+            print("writing " + path + " to parquet file")
             write_csv_to_parquet(path, pq_writer)
     pq_writer.close()
+    print("finished writing parquet file!")
 
+def print_parquet(file_name):
+    print(pq.read_metadata(file_name))
 
 if __name__ == "__main__":
-    # write_month_to_csv("enf_data/august.csv", 2024, 8)
-    write_parquet_to_csv("enf_data/2024/8/14.parquet", "enf_data/fourtheenth.csv", include_header=True)
+    write_parquet_to_csv("enf_data/2024/8/13.parquet", "enf_data/2024/8/13.csv")
+    write_parquet_to_csv("enf_data/2024/8/14.parquet", "enf_data/2024/8/14.csv")
+    write_parquet_to_csv("enf_data/2024/8/15.parquet", "enf_data/2024/8/15.csv")
+    # write_month_to_parquet("enf_data/august.parquet", 2024, 8)
+    # print_parquet("enf_data/august.parquet")

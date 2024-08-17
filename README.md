@@ -12,7 +12,5 @@ This was good, so I tracked where it was sending its requests:
 https://netzfrequenzmessung.de:9081/frequenz02c.xml?c={number}
 ```
 Where {number} was randomly generated between 0 and 310,000.
-Then, I started trying edge-case numbers (0, 310000, 310001, -1, -31). -31 and 310000 always seemed to work, whereas other ones were sketchy or didn't work at all. So, I started a script (running on [HackClub's Nest](https://github.com/hackclub/nest), which is amazing (and free!!)!!) that would write the data from this server every second. I had to work around some rate-limiting
-issues, and the cost of writing to a file that could be arbitrarily long. I used Parquet to solve this issue, but then I also
-chunked my data by day, limiting each file to 86.5 lines. In theory, I could just be using CSV for that... maybe. Still, to be safe,
-might as well use Parquet files. Every month, I run a script that compiles each day into one massive month-long CSV file, which you'll soon find published here.
+Then, I started trying edge-case numbers (0, 310000, 310001, -1, -31). -31 and 310000 always seemed to work, whereas other ones were sketchy or didn't work at all. So, I started a script (running on [HackClub's Nest](https://github.com/hackclub/nest), which is amazing (and free!!)!!) that would write the data from this server every second. I write every day of data to a CSV file, but then I also
+chunked my data by day, limiting each file to 86.5 thousand lines. Every month, I run a script that compiles each day into one massive month-long Parquet file (which is better than CSV at that size), which you'll soon find published here.
