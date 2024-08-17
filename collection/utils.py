@@ -1,4 +1,5 @@
 import random
+from get_data_name import get_enf_data_file_name
 
 UA_LIST = [
     'Dalvik/2.1.0 (Linux; U; Android 11; V2026 Build/RP1A.200720.012)',
@@ -15,3 +16,15 @@ UA_LIST = [
 
 def getUA():
     return random.choice(UA_LIST)
+
+
+def get_seconds_from_timestamp(timestamp):
+    return int(timestamp.split(":")[-1])
+
+
+def print_info():
+    with open(get_enf_data_file_name(), 'r') as file:
+        lines = file.readlines()
+        ergh = len(lines) - 1
+        print(get_enf_data_file_name() + " has " + str(ergh) + " entries. last entry written:")
+        print(lines[-1])
