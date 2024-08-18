@@ -1,5 +1,6 @@
 import random
-from get_data_name import get_enf_data_file_name
+import datetime
+from get_data_name import get_enf_data_file_name, get_error_file_name
 
 UA_LIST = [
     'Dalvik/2.1.0 (Linux; U; Android 11; V2026 Build/RP1A.200720.012)',
@@ -23,8 +24,20 @@ def get_seconds_from_timestamp(timestamp):
 
 
 def print_info():
+    num_lines = 0
+    today = str(datetime.datetime.now().day)
     with open(get_enf_data_file_name(), 'r') as file:
         lines = file.readlines()
-        ergh = len(lines) - 1
-        print(get_enf_data_file_name() + " has " + str(ergh) + " entries. last entry written:")
-        print(lines[-1])
+        num_lines = len(lines)
+
+    errors = []
+    with open(get_error_file_name(), 'r') as err:
+        errors = err.readlines()
+        errors = [e for e in errors if e[0:2] == today]
+
+    print(get_enf_data_file_name() + " has " + str(num_lines) + " entries.")
+    print("that's about " + str(num_lines // (60 * 60)) + ":" + str((num_lines // 60) % 60) + ":" + str(num_lines % 60) + " of data")
+    print("data loss:")
+    small_errors = len([a for a in errors if a[3] == '0'])
+    print("\taveraged values (small errors): " + str(small_errors))
+    print("\tlarge errors (>2s) that we couldn't average: " + str(len(errors) - small_errors))

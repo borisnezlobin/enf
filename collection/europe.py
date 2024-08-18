@@ -93,6 +93,7 @@ def append_to_csv(data):
                 "d": (data["d"] + last_data["d"]) / 2
             }
             df = pd.DataFrame([fake_data, data])
+            write_error(last_succesful_write, 0)
 
 
     if os.path.exists(last_name):
@@ -136,5 +137,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # print_info()
+    # main()
+    print_info()
