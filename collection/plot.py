@@ -8,6 +8,6 @@ def plot(year, month, day, timestamp):
 
     fig, ax = plt.subplots()
     ax.plot(df["time"], df["frequency"])
-    fig.show()
+    plt.show()
 
-plot(2024, 8, 19, "19.08.2024 00:")
+plot(2024, 8, 19, "19.08.2024")
