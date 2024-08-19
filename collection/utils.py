@@ -41,3 +41,7 @@ def print_info():
     small_errors = len([a for a in errors if a[3] == '0'])
     print("\taveraged values (small errors): " + str(small_errors))
     print("\tlarge errors (>2s) that we couldn't average: " + str(len(errors) - small_errors))
+    sum = 0
+    for i in errors:
+        sum += int(i.split(",")[-1])
+    print("\tthat's " + str(sum // 1000) + " seconds")
