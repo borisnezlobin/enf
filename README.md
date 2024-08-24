@@ -1,7 +1,6 @@
 # Electrical Network Frequency Analysis
 
-This repo is where I do all of my ENF work. I collaborate with Bellingcat's open-source team to work on various
-bits of the ENF process. Right now, I'm working on getting accurate data on the European grid (you can find my progress, and data, in `/collection`).
+This repo is where I do all of my ENF work. I collaborate with Bellingcat's open-source team to work on parts of the ENF matching process. I've started collecting European ENF data; [read the writeup on my blog](https://bnezlobin.vercel.app/blog/enf-data).
 
 ## Data Collection Approach
 
