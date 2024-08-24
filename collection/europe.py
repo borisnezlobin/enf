@@ -77,7 +77,7 @@ def append_to_csv(data):
     df = pd.DataFrame([data])
 
     now = int(time.time() * 1000 + 500)
-    if now - last_succesful_write > 2500:
+    if now - last_succesful_write > 2800:
         write_error(last_succesful_write, now - last_succesful_write)
     elif last_data != None:
         # it's been two seconds, so we can actually interpolate the previous one lol
@@ -111,7 +111,7 @@ def write_error(start, duration):
     header = False
     if not os.path.exists(path):
         header = True
-    
+
     with open(path, 'a') as error:
         if header:
             print("error file does not exist, writing header")
@@ -123,18 +123,22 @@ def write_error(start, duration):
         print("wrote error to error.csv")
 
 def main():
-    print("Starting collection...")
     while True:
-        data = get_enf_data()
-        if data is None:
-            print("Failed to get data at " + str(datetime.datetime.now()))
+        try:
+            print("Starting collection...")
+            while True:
+                data = get_enf_data()
+                if data is None:
+                    print("Failed to get data at " + str(datetime.datetime.now()))
 
-            # If we get "too many requests", we can just wait a bit and it tends to start working.
-            time.sleep(1)
-            continue
-        append_to_csv(data)
-        time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
-
+                    # If we get "too many requests", we can just wait a bit and it tends to start working.
+                    time.sleep(1)
+                    continue
+                append_to_csv(data)
+                time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
+        except e:
+             print("error! " + str(datetime.datetime.now()))
+             print(e)
 
 if __name__ == "__main__":
     # main()

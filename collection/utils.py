@@ -38,7 +38,7 @@ def print_info():
     print(get_enf_data_file_name() + " has " + str(num_lines) + " entries.")
     print("that's about " + str(num_lines // (60 * 60)) + ":" + str((num_lines // 60) % 60) + ":" + str(num_lines % 60) + " of data")
     print("data loss:")
-    small_errors = len([a for a in errors if a[3] == '0'])
+    small_errors = len([a for a in errors if a.split(",")[2].strip() == '0'])
     print("\taveraged values (small errors): " + str(small_errors))
     print("\tlarge errors (>2s) that we couldn't average: " + str(len(errors) - small_errors))
     sum = 0
