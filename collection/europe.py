@@ -14,13 +14,10 @@ import datetime
 import time
 import os
 
-last_succesful_write = int(time.time() * 1000 + 500)
+last_succesful_write = None
 
-# the numbers 310_000 and -31 always work, but if you send too many requests, they will tell you so...
-# so this function gives a random one of the two
 def get_c():
-    opts = [-31, 310_000]
-    return str(random.choice(opts))
+    return str(-31 * random.randint(1, 69_273_666))
 
 def get_ip():
     return ".".join(str(random.randint(0, 255)) for _ in range(4))
@@ -77,9 +74,9 @@ def append_to_csv(data):
     df = pd.DataFrame([data])
 
     now = int(time.time() * 1000 + 500)
-    if now - last_succesful_write > 2800:
+    if last_succesful_write != None and now - last_succesful_write > 2800:
         write_error(last_succesful_write, now - last_succesful_write)
-    elif last_data != None:
+    elif last_succesful_write != None and last_data != None:
         # it's been two seconds, so we can actually interpolate the previous one lol
         current_tm = get_seconds_from_timestamp(data["time"])
         last_tm = get_seconds_from_timestamp(last_data["time"])
@@ -136,10 +133,9 @@ def main():
                     continue
                 append_to_csv(data)
                 time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
-        except e:
-             print("error! " + str(datetime.datetime.now()))
-             print(e)
+        except:
+            print("error! " + str(datetime.datetime.now()))
 
 if __name__ == "__main__":
-    # main()
-    print_info()
+    main()
+    # print_info()
