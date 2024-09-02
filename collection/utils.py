@@ -1,6 +1,7 @@
 import random
 import datetime
 from get_data_name import get_enf_data_file_name, get_error_file_name
+import os
 
 UA_LIST = [
     'Dalvik/2.1.0 (Linux; U; Android 11; V2026 Build/RP1A.200720.012)',
@@ -31,9 +32,10 @@ def print_info():
         num_lines = len(lines)
 
     errors = []
-    with open(get_error_file_name(), 'r') as err:
-        errors = err.readlines()
-        errors = [e for e in errors if e[0:2] == today]
+    if os.path.exists(get_error_file_name()):
+        with open(get_error_file_name(), 'r') as err:
+            errors = err.readlines()
+            errors = [e for e in errors if e[0:2] == today]
 
     print(get_enf_data_file_name() + " has " + str(num_lines) + " entries.")
     print("that's about " + str(num_lines // (60 * 60)) + ":" + str((num_lines // 60) % 60) + ":" + str(num_lines % 60) + " of data")
@@ -45,3 +47,6 @@ def print_info():
     for i in errors:
         sum += int(i.split(",")[-1])
     print("\tthat's " + str(sum // 1000) + " seconds")
+
+if __name__ == "__main__":
+    print_info()

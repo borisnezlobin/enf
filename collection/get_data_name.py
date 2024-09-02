@@ -8,4 +8,4 @@ def get_error_file_name():
 
 def get_current_data_dir():
     now = datetime.datetime.now()
-    return "enf_data/" + str(now.year) + "/" + str(now.month) + "/"
+    return "/home/random/enf/collection/enf_data/" + str(now.year) + "/" + str(now.month) + "/"

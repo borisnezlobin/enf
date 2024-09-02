@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
-from get_data_name import get_enf_data_file_name, get_error_file_name
+from get_data_name import get_enf_data_file_name, get_error_file_name, get_current_data_dir
 from utils import getUA, print_info, get_seconds_from_timestamp
 import datetime
 import time
@@ -96,6 +96,9 @@ def append_to_csv(data):
     if os.path.exists(last_name):
         df.to_csv(last_name, index=False, header=False, mode='a')
     else:
+        if not os.path.exists(get_current_data_dir()):
+           os.mkdir(get_current_data_dir())
+           print("created directory", get_current_data_dir())
         print("File doesn't exist, writing data and header")
         df.to_csv(last_name, index=False, header=True, mode='a')
 
@@ -133,8 +136,12 @@ def main():
                     continue
                 append_to_csv(data)
                 time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
-        except:
+        except KeyboardInterrupt:
+            print("\nkeyboard interrupt, exiting")
+            exit(0)
+        except Exception as error:
             print("error! " + str(datetime.datetime.now()))
+            print("error:", error)
 
 if __name__ == "__main__":
     main()
