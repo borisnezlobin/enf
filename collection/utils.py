@@ -35,7 +35,7 @@ def print_info():
     if os.path.exists(get_error_file_name()):
         with open(get_error_file_name(), 'r') as err:
             errors = err.readlines()
-            errors = [e for e in errors if e[0:2] == today]
+            errors = [e for e in errors if e[0] == today or  e[0:2] == today]
 
     print(get_enf_data_file_name() + " has " + str(num_lines) + " entries.")
     print("that's about " + str(num_lines // (60 * 60)) + ":" + str((num_lines // 60) % 60) + ":" + str(num_lines % 60) + " of data")
