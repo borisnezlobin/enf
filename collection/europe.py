@@ -14,6 +14,12 @@ import datetime
 import time
 import os
 
+def log(s):
+    print(
+        datetime.datetime.now().strftime("(%d/%m %H:%M:%S) ") +
+        str(s)
+    )
+
 last_succesful_write = None
 
 def get_c():
@@ -23,7 +29,7 @@ def get_ip():
     return ".".join(str(random.randint(0, 255)) for _ in range(4))
 
 def get_enf_data():
-    url = "https://netzfrequenzmessung.de:9081/frequenz02c.xml?c=" + get_c()
+    url = "https://netzfrequenzmessung.de:9080/frequenz03c.xml?c=" + get_c()
     ip = get_ip()
     headers = {
         "Accept": "*/*",
@@ -40,17 +46,18 @@ def get_enf_data():
     }
     response = requests.get(url, headers=headers)
     data = response.text
+    data = data.replace("<f<", "<")
 
     try:
         xml = ET.fromstring(data)
         freq = xml.find("f2").text
-        time = xml.find("z").text
+        data_time = xml.find("z").text
         phase = xml.find("p").text
         d = xml.find("d").text # I don't know what d is, but it's there so it's (probably) important
 
         data = {
             "frequency": float(freq),
-            "time": time.strip(),
+            "time": data_time.strip(),
             "phase": float(phase),
             "d": float(d),
         }
@@ -59,6 +66,12 @@ def get_enf_data():
     except:
         print()
         print(data)
+        if "Client error: 423" in data:
+            # resource is locked, we probably got rate limited.
+            # no fix that I know of other than just waiting a bit
+            log("waiting thirty seconds to (hopefully) resolve rate limit...")
+            time.sleep(30)
+            log("done waiting")
         return None
 
 
@@ -68,7 +81,7 @@ def append_to_csv(data):
     global last_name, last_data, last_succesful_write
 
     if last_name != get_enf_data_file_name():
-        print("New day, creating new CSV file")
+        log("New day, creating new CSV file")
         last_name = get_enf_data_file_name()
 
     df = pd.DataFrame([data])
@@ -81,8 +94,8 @@ def append_to_csv(data):
         current_tm = get_seconds_from_timestamp(data["time"])
         last_tm = get_seconds_from_timestamp(last_data["time"])
         if current_tm % 60 == (last_tm + 2) % 60:
-            print("missed request (probably due to rate limit) at " + str(datetime.datetime.now()))
-            print("\tthis value will be interpolated")
+            log("missed request (probably due to rate limit)")
+            log("\tthis value will be interpolated")
             fake_data = {
                 "frequency": (data["frequency"] + last_data["frequency"]) / 2,
                 "time": data["time"][0:-2] + str(last_tm + 1),
@@ -98,8 +111,8 @@ def append_to_csv(data):
     else:
         if not os.path.exists(get_current_data_dir()):
            os.mkdir(get_current_data_dir())
-           print("created directory", get_current_data_dir())
-        print("File doesn't exist, writing data and header")
+           log("created directory", get_current_data_dir())
+        log("File doesn't exist, writing data and header")
         df.to_csv(last_name, index=False, header=True, mode='a')
 
     last_succesful_write = now
@@ -114,22 +127,22 @@ def write_error(start, duration):
 
     with open(path, 'a') as error:
         if header:
-            print("error file does not exist, writing header")
+            log("error file does not exist, writing header")
             error.write("day,start,duration\n")
 
         error.write(
             str(datetime.datetime.now().day) + "," + str(start) + "," + str(duration) + "\n"
         )
-        print("wrote error to error.csv")
+        log("wrote error to error.csv")
 
 def main():
     while True:
         try:
-            print("Starting collection...")
+            log("Starting collection...")
             while True:
                 data = get_enf_data()
                 if data is None:
-                    print("Failed to get data at " + str(datetime.datetime.now()))
+                    log("Failed to get data")
 
                     # If we get "too many requests", we can just wait a bit and it tends to start working.
                     time.sleep(1)
@@ -137,11 +150,11 @@ def main():
                 append_to_csv(data)
                 time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
         except KeyboardInterrupt:
-            print("\nkeyboard interrupt, exiting")
+            log("\nkeyboard interrupt, exiting")
             exit(0)
         except Exception as error:
-            print("error! " + str(datetime.datetime.now()))
-            print("error:", error)
+            log("error!")
+            log(error)
 
 if __name__ == "__main__":
     main()
