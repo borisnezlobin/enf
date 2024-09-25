@@ -1,7 +1,13 @@
 import random
 import datetime
-from get_data_name import get_enf_data_file_name, get_error_file_name
+from get_data_name import get_enf_data_file_name, get_error_file_name, get_current_data_dir
 import os
+
+def log(s):
+    print(
+        datetime.datetime.now().strftime("(%d/%m %H:%M:%S) ") +
+        str(s)
+    )
 
 UA_LIST = [
     'Dalvik/2.1.0 (Linux; U; Android 11; V2026 Build/RP1A.200720.012)',
@@ -23,30 +29,70 @@ def getUA():
 def get_seconds_from_timestamp(timestamp):
     return int(timestamp.split(":")[-1])
 
+def seconds_to_format(seconds):
+    ret = str(seconds % 60) + "s"
+    if (seconds >= 60):
+        ret = str((seconds // 60) % 60) + "m " + ret
+    if (seconds >= 60 * 60):
+        ret = str((seconds // (60 * 60)) % 24) + "h " + ret
+
+    if (seconds >= 60 * 60 * 24):
+        ret = str(seconds // (60 * 60 * 24)) + "d " + ret
+    
+    return ret
+
 
 def print_info():
-    num_lines = 0
-    today = str(datetime.datetime.now().day)
-    with open(get_enf_data_file_name(), 'r') as file:
-        lines = file.readlines()
-        num_lines = len(lines)
+    today = datetime.datetime.now().day
+    max_error = -1
+    max_error_day = -1
+    total_error = 0
 
     errors = []
     if os.path.exists(get_error_file_name()):
         with open(get_error_file_name(), 'r') as err:
             errors = err.readlines()
-            errors = [e for e in errors if e[0] == today or  e[0:2] == today]
 
-    print(get_enf_data_file_name() + " has " + str(num_lines) + " entries.")
-    print("that's about " + str(num_lines // (60 * 60)) + ":" + str((num_lines // 60) % 60) + ":" + str(num_lines % 60) + " of data")
-    print("data loss:")
-    small_errors = len([a for a in errors if a.split(",")[2].strip() == '0'])
-    print("\taveraged values (small errors): " + str(small_errors))
-    print("\tlarge errors (>2s) that we couldn't average: " + str(len(errors) - small_errors))
-    sum = 0
-    for i in errors:
-        sum += int(i.split(",")[-1])
-    print("\tthat's " + str(sum // 1000) + " seconds")
+    for i in range(1, today + 1):
+        num_lines = 0
+        day_path = get_current_data_dir() + str(i) + ".csv"
+        if not os.path.exists(day_path):
+            continue
+        with open(day_path, 'r') as file:
+            lines = file.readlines()
+            num_lines = len(lines)
+
+
+        day_errors = [e for e in errors if e[0] == str(i) or e[0:2] == str(i)]
+
+        small_errors = len([a for a in day_errors if a.split(",")[2].strip() == '0'])
+        duration = 0
+        for j in day_errors:
+            duration += int(j.split(",")[-1])
+
+        p_error = ((duration / (24 * 60 * 60 * 1000)) * 100)
+        if p_error > max_error:
+            max_error = p_error
+            max_error_day = i
+        total_error += duration
+
+        if i == today:
+            print("\n\n+++ TODAY +++\n")
+            print(get_enf_data_file_name() + " has " + str(num_lines) + " entries.")
+            print("that's about " + seconds_to_format(num_lines) + " of data")
+            print("data loss:")
+            print("\taveraged values (small errors): " + str(small_errors))
+            print("\tlarge errors (>2s) that we couldn't average: " + str(len(day_errors) - small_errors))
+            print("\tthat's " + seconds_to_format(duration))
+        else:
+            print(
+                str(i) + ": " + str(len(day_errors)) + " (" + str(small_errors) + " small). " + str(duration // 1000) + "s of error ("
+                + str(p_error) + "%)"
+            )
+    
+    print("\n\n+++ ERROR SUMMARY +++\n")
+    print("total error: " + seconds_to_format(total_error))
+    print("highest error was on day " + str(max_error_day) + ": " + str(max_error) + "%.")
 
 if __name__ == "__main__":
     print_info()

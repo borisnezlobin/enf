@@ -9,28 +9,20 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
 from get_data_name import get_enf_data_file_name, get_error_file_name, get_current_data_dir
-from utils import getUA, print_info, get_seconds_from_timestamp
+from utils import getUA, get_seconds_from_timestamp
+from proxies import get_proxy, update_proxies, mark_bad_proxy
 import datetime
 import time
 import os
-
-def log(s):
-    print(
-        datetime.datetime.now().strftime("(%d/%m %H:%M:%S) ") +
-        str(s)
-    )
+from utils import log
 
 last_succesful_write = None
 
 def get_c():
     return str(-31 * random.randint(1, 69_273_666))
 
-def get_ip():
-    return ".".join(str(random.randint(0, 255)) for _ in range(4))
-
 def get_enf_data():
     url = "https://netzfrequenzmessung.de:9080/frequenz03c.xml?c=" + get_c()
-    ip = get_ip()
     headers = {
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.5",
@@ -41,10 +33,20 @@ def get_enf_data():
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
         "User-Agent": getUA(),
-        "Forwarded": "for=" + ip,
-        "X-Forwarded-For": ip,
     }
-    response = requests.get(url, headers=headers)
+
+    proxy = get_proxy()
+    log("got proxy " + str(proxy))
+    response = None
+    try:
+        response = requests.get(url, headers=headers, proxies=proxy)
+        log("got responsee")
+    except requests.exceptions.ProxyError:
+        log("proxy error! marking as bad")
+        mark_bad_proxy(proxy)
+        return None
+    log("got response")
+
     data = response.text
     data = data.replace("<f<", "<")
 
@@ -64,14 +66,9 @@ def get_enf_data():
 
         return data
     except:
-        print()
-        print(data)
-        if "Client error: 423" in data:
-            # resource is locked, we probably got rate limited.
-            # no fix that I know of other than just waiting a bit
-            log("waiting thirty seconds to (hopefully) resolve rate limit...")
-            time.sleep(30)
-            log("done waiting")
+        log(data)
+        log("caught error; updating proxies...")
+        update_proxies()
         return None
 
 
@@ -143,10 +140,8 @@ def main():
                 data = get_enf_data()
                 if data is None:
                     log("Failed to get data")
-
-                    # If we get "too many requests", we can just wait a bit and it tends to start working.
-                    time.sleep(1)
                     continue
+                log("appending to csv")
                 append_to_csv(data)
                 time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
         except KeyboardInterrupt:
