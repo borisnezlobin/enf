@@ -39,10 +39,11 @@ def get_enf_data():
     log("got proxy " + str(proxy))
     response = None
     try:
-        response = requests.get(url, headers=headers, proxies=proxy)
+        response = requests.get(url, headers=headers, proxies=proxy, timeout=1)
         log("got responsee")
-    except requests.exceptions.ProxyError:
+    except requests.exceptions.ProxyError as e:
         log("proxy error! marking as bad")
+        log(e)
         mark_bad_proxy(proxy)
         return None
     log("got response")

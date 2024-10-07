@@ -70,7 +70,8 @@ def print_info():
         for j in day_errors:
             duration += int(j.split(",")[-1])
 
-        p_error = ((duration / (24 * 60 * 60 * 1000)) * 100)
+        p_error = ((duration / (24 * 60 * 60 * 1000)) * 100) * 100 + 0.5
+        p_error = int(p_error) / 100
         if p_error > max_error:
             max_error = p_error
             max_error_day = i
