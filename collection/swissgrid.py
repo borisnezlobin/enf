@@ -10,7 +10,6 @@ import pyarrow as pa
 import pandas as pd
 from get_data_name import get_enf_data_file_name, get_error_file_name, get_current_data_dir
 from utils import getUA, get_seconds_from_timestamp
-from proxies import get_proxy, update_proxies, mark_bad_proxy
 import datetime
 from proxy_requests import ProxyRequests
 import time
@@ -19,64 +18,40 @@ from utils import log
 
 last_succesful_write = None
 
-def get_c():
-    return str(-31 * random.randint(1, 69_273_666))
-
 def get_enf_data():
-    url = "https://netzfrequenzmessung.de:9080/frequenz03c.xml?c=" + get_c()
+    url = "https://data.swissgrid.ch/getlivedata/wam/?lang=en"
     headers = {
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.5",
         "Connection": "keep-alive",
-        "Host": "www.mainsfrequency.com",
-        "Referer": "https://www.mainsfrequency.com/", # trust me bro
+        "Referer": "www.swissgrid.ch", # trust me bro
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
         "User-Agent": getUA(),
     }
 
-    # proxy = get_proxy()
-    # log("got proxy " + str(proxy))
     response = None
-    log("starting request")
     try:
-        r = ProxyRequests(url)
-        r.set_headers(headers)
-        r.get_with_headers()
-
-        r.print()
-        # response = requests.get(url, headers=headers, proxies=proxy, timeout=1)
-        log("got responsee")
+        response = requests.get(url, headers=headers, timeout=1).json()
     except requests.exceptions.ProxyError as e:
         log("proxy error! marking as bad")
         log(e)
-        # mark_bad_proxy(proxy)
         return None
-    log("got response")
-
-    data = response.text
-    data = data.replace("<f<", "<")
 
     try:
-        xml = ET.fromstring(data)
-        freq = xml.find("f2").text
-        data_time = xml.find("z").text
-        phase = xml.find("p").text
-        d = xml.find("d").text # I don't know what d is, but it's there so it's (probably) important
+        table = response["data"]["table"]
 
+        freq = table[1]["value"][0:-3]
         data = {
             "frequency": float(freq),
-            "time": data_time.strip(),
-            "phase": float(phase),
-            "d": float(d),
+            "time": table[5]["value"].strip(),
         }
 
         return data
     except:
-        log(data)
-        log("caught error; updating proxies...")
-        update_proxies()
+        # log(data)
+        log("caught error")
         return None
 
 
@@ -149,7 +124,7 @@ def main():
                 if data is None:
                     log("Failed to get data")
                     continue
-                log("appending to csv")
+                
                 append_to_csv(data)
                 time.sleep(1 - datetime.datetime.now().microsecond / 1_000_000)
         except KeyboardInterrupt:
@@ -161,4 +136,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # get_enf_data()
     # print_info()
